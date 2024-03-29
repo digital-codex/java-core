@@ -11,11 +11,14 @@ class FileTreeWalkerTest {
                 "/usr/local/bin/cmake",
                 FileTreeWalker.find("cmake").toString()
         );
+    }
 
+    @Test
+    void test_resolve_cmake_executable_then_assert() throws Exception {
         assertEquals(
                 "/usr/local/bin/cmake",
                 FileTreeWalker.resolve(
-                        "/usr/local/bin/cmake", "cmake"
+                        "/usr/local/bin", "cmake"
                 ).toString()
         );
     }
