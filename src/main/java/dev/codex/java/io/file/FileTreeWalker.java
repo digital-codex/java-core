@@ -1,5 +1,8 @@
 package dev.codex.java.io.file;
 
+import dev.codex.java.lang.Result;
+
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -18,18 +21,19 @@ public class FileTreeWalker {
         super();
     }
 
-    public static Path find(String file) throws Exception {
+    public static Result<Path> find(String file) {
         return FileTreeWalker.resolve(FileTreeWalker.PATH, file);
     }
 
-    public static Path resolve(String directories, String file) throws Exception {
+    public static Result<Path> resolve(String directories, String file) {
         if (file == null)
-            // TODO: refactor thrown exception
-            throw new Exception();
+            return Result.failure(
+                    new NullPointerException("`file` must be non-null")
+            );
 
         Path found = FileTreeWalker.CACHE.get(file);
         if (found != null)
-            return found;
+            return Result.success(found);
 
         PathQueue queue = (directories.indexOf(':') < 0)
                 ? new PathQueue(new Path[]{ Paths.get(directories) })
@@ -47,6 +51,8 @@ public class FileTreeWalker {
             if (Files.isDirectory(current)) {
                 try (Stream<Path> stream = Files.list(current)) {
                     stream.forEach(queue::enqueue);
+                } catch (IOException e) {
+                    return Result.failure(e);
                 }
             } else {
                 if (FileTreeWalker.cached(FileTreeWalker.filename(current)))
@@ -56,12 +62,15 @@ public class FileTreeWalker {
                         FileTreeWalker.filename(current), current
                 );
                 if (file.compareTo(FileTreeWalker.filename(current)) == 0)
-                    return current;
+                    return Result.success(current);
             }
         }
 
-        // TODO: refactor thrown exception
-        throw new Exception();
+        return Result.failure(
+                new IllegalArgumentException(
+                        "`file` cannot be resolved from `directories`"
+                )
+        );
     }
 
     private static String filename(Path path) {
@@ -86,7 +95,7 @@ public class FileTreeWalker {
 
         public Path dequeue() {
             Path e = this.elements[this.head];
-            if (e == null) {
+            if (e != null) {
                 this.elements[this.head] = null;
                 if (++this.head >= this.elements.length)
                     this.head = 0;
@@ -123,7 +132,7 @@ public class FileTreeWalker {
                     this.head,
                     this.elements,
                     this.head + newSpace,
-                    oldCapacity + this.head
+                    oldCapacity - this.head
             );
             this.head += newSpace;
         }
