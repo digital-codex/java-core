@@ -1,6 +1,7 @@
 package dev.codex.java.lang;
 
 import java.util.NoSuchElementException;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 // TODO: add equals, hashCode, and toString
@@ -27,6 +28,21 @@ public final class Result<T> {
 
     public boolean isFailure() {
         return this.failure != null;
+    }
+
+    // TODO: add test
+    public void ifSuccess(Consumer<? super T> consumer) {
+        if (this.isSuccess()) {
+            consumer.accept(this.success);
+        }
+    }
+
+    public void ifSuccessOrElse(Consumer<? super T> consumer, Runnable runnable) {
+        if (this.isSuccess()) {
+            consumer.accept(this.success);
+        } else {
+            runnable.run();
+        }
     }
 
     public T get() {

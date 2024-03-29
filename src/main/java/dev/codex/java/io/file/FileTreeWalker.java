@@ -4,6 +4,7 @@ import dev.codex.java.lang.Result;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -48,11 +49,11 @@ public class FileTreeWalker {
             if (current == null)
                 continue;
 
-            if (Files.isDirectory(current)) {
+            if (Files.isDirectory(current, LinkOption.NOFOLLOW_LINKS) && Files.isReadable(current)) {
                 try (Stream<Path> stream = Files.list(current)) {
                     stream.forEach(queue::enqueue);
                 } catch (IOException e) {
-                    return Result.failure(e);
+                    // skip
                 }
             } else {
                 if (FileTreeWalker.cached(FileTreeWalker.filename(current)))

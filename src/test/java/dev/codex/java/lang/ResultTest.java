@@ -1,6 +1,6 @@
 package dev.codex.java.lang;
 
-import dev.codex.java.io.file.FileTreeWalker;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.NoSuchElementException;
@@ -8,6 +8,26 @@ import java.util.NoSuchElementException;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ResultTest {
+    @Test
+    void test_if_success_then_assert() {
+        Result.success("hello world").ifSuccess(x -> assertEquals("hello world", x));
+    }
+
+    @Test
+    void test_if_failure_then_assert() {
+        Result.failure(new RuntimeException()).ifSuccess(x -> fail());
+    }
+
+    @Test
+    void test_if_success_or_else_of_success_then_assert() {
+        Result.success("hello world").ifSuccessOrElse(x -> assertEquals("hello world", x), Assertions::fail);
+    }
+
+    @Test
+    void test_if_success_or_else_of_failure_then_assert() {
+        Result.failure(new RuntimeException()).ifSuccessOrElse(x -> fail(), () -> assertTrue(true));
+    }
+
     @Test
     void test_get_result_of_success_then_assert() {
         Result<String> result = Result.success("hello world");
