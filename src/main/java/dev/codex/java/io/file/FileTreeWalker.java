@@ -3,6 +3,7 @@ package dev.codex.java.io.file;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -12,10 +13,6 @@ public class FileTreeWalker {
 
     // TODO: refactor Map as cache
     private static final Map<String, Path> CACHE = new HashMap<>();
-
-    private static Path[] queue;
-    private static int head;
-    private static int tail;
 
     private FileTreeWalker() {
         super();
@@ -34,32 +31,22 @@ public class FileTreeWalker {
         if (found != null)
             return found;
 
-        FileTreeWalker.queue = new Path[16];
-        FileTreeWalker.head = 0;
-        FileTreeWalker.tail = 0;
+        PathQueue queue = (directories.indexOf(':') < 0)
+                ? new PathQueue(new Path[]{ Paths.get(directories) })
+                : new PathQueue(
+                        Arrays.stream(directories.split(":"))
+                                .map(Paths::get)
+                                .toArray(Path[]::new)
+        );
 
-        if (directories.indexOf(':') < 0) {
-            FileTreeWalker.queue[tail++] = Paths.get(directories);
-        } else {
-            for (String path : directories.split(":")) {
-                FileTreeWalker.enqueue(Paths.get(path));
-            }
-        }
-
-        while (FileTreeWalker.head != FileTreeWalker.tail) {
-            Path current = FileTreeWalker.queue[FileTreeWalker.head];
+        while (!queue.isEmpty()) {
+            Path current = queue.dequeue();
             if (current == null)
                 continue;
 
-            FileTreeWalker.queue[FileTreeWalker.head] = null;
-            if (++FileTreeWalker.head >= FileTreeWalker.queue.length)
-                FileTreeWalker.head = 0;
-
             if (Files.isDirectory(current)) {
                 try (Stream<Path> stream = Files.list(current)) {
-                    for (Path path : stream.toArray(Path[]::new)) {
-                        FileTreeWalker.enqueue(path);
-                    }
+                    stream.forEach(queue::enqueue);
                 }
             } else {
                 if (FileTreeWalker.cached(FileTreeWalker.filename(current)))
@@ -85,26 +72,64 @@ public class FileTreeWalker {
         return FileTreeWalker.CACHE.containsKey(filename);
     }
 
-    private static void enqueue(Path path) {
-        FileTreeWalker.queue[FileTreeWalker.tail] = path;
-        if (++FileTreeWalker.tail >= FileTreeWalker.queue.length)
-            FileTreeWalker.tail = 0;
+    private static class PathQueue {
+        private Path[] elements;
+        private int head;
+        private int tail;
 
-        if (FileTreeWalker.head != FileTreeWalker.tail)
-            return;
+        public PathQueue(Path[] paths) {
+            this.elements = new Path[16 + 1];
+            for (Path path : paths) {
+                this.enqueue(path);
+            }
+        }
 
-        final int oldCapacity = FileTreeWalker.queue.length;
-        final int newCapacity = oldCapacity << 1;
-        Path[] newQueue = new Path[newCapacity];
-        final int newSpace = newCapacity - oldCapacity;
-        System.arraycopy(
-                FileTreeWalker.queue,
-                FileTreeWalker.head,
-                newQueue,
-                FileTreeWalker.head + newSpace,
-                oldCapacity - FileTreeWalker.head
-        );
-        FileTreeWalker.queue = newQueue;
-        FileTreeWalker.head += newSpace;
+        public Path dequeue() {
+            Path e = this.elements[this.head];
+            if (e == null) {
+                this.elements[this.head] = null;
+                if (++this.head >= this.elements.length)
+                    this.head = 0;
+            }
+            return e;
+        }
+
+        public void enqueue(Path path) {
+            this.elements[this.tail] = path;
+            if (++tail >= this.elements.length)
+                this.tail = 0;
+
+            if (head != tail)
+                return;
+
+            final int oldCapacity = this.elements.length;
+            final int newCapacity = oldCapacity << 1;
+            Path[] newElements = new Path[newCapacity];
+            System.arraycopy(
+                    this.elements,
+                    0,
+                    newElements,
+                    0,
+                    oldCapacity
+            );
+            this.elements = newElements;
+
+            if (this.elements[this.head] == null)
+                return;
+
+            final int newSpace = newCapacity - oldCapacity;
+            System.arraycopy(
+                    this.elements,
+                    this.head,
+                    this.elements,
+                    this.head + newSpace,
+                    oldCapacity + this.head
+            );
+            this.head += newSpace;
+        }
+
+        public boolean isEmpty() {
+            return this.head == this.tail;
+        }
     }
 }
