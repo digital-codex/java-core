@@ -1,10 +1,10 @@
 package dev.codex.java.lang;
 
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-// TODO: add equals, hashCode, and toString
 public final class Result<T> {
     private final T success;
     private final Exception failure;
@@ -30,7 +30,6 @@ public final class Result<T> {
         return this.failure != null;
     }
 
-    // TODO: add test
     public void ifSuccess(Consumer<? super T> consumer) {
         if (this.isSuccess()) {
             consumer.accept(this.success);
@@ -65,5 +64,26 @@ public final class Result<T> {
 
     public T orElseGet(Supplier<? extends T> supplier) {
         return this.isSuccess() ? this.success : supplier.get();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == this) return true;
+        if (!(o instanceof Result<?> that)) return false;
+        return Objects.equals(this.success, that.success)
+                && Objects.equals(this.failure, that.failure);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(this.success, this.failure);
+    }
+
+    @Override
+    public String toString() {
+        return "Result{" +
+                "success=" + this.success.toString()
+                + ", failure=" + this.failure.toString()
+                + "}";
     }
 }

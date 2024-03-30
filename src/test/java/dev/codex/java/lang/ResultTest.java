@@ -59,6 +59,24 @@ class ResultTest {
     }
 
     @Test
+    void test_or_else_result_of_success_then_assert() {
+        Result<String> result = Result.success("hello world");
+        assertEquals(
+                "hello world",
+                result.orElse("hello world")
+        );
+    }
+
+    @Test
+    void test_or_else_result_of_failure_then_assert() {
+        Result<String> result = Result.failure(new RuntimeException());
+        assertEquals(
+                "goodbye moon",
+                result.orElse("goodbye moon")
+        );
+    }
+
+    @Test
     void test_or_else_get_result_of_success_then_assert() {
         Result<String> result = Result.success("hello world");
         assertEquals(
