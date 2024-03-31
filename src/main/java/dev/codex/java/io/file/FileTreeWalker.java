@@ -179,12 +179,14 @@ public class FileTreeWalker {
 
         private Optional<Path> get(String key) {
             return this.isEmpty() ? Optional.empty()
-                    : Optional.ofNullable(this.find(this.entries, key).getValue());
+                    : Optional.ofNullable(this.find(key).getValue());
         }
 
         private void set(String key, Path value) {
             if (this.count + 1 > this.entries.length * PathCache.LOAD_FACTOR) {
-                Entry[] newEntries = new Entry[this.entries.length < 8 ? 8 : this.entries.length << 1];
+                final int newCapacity = this.entries.length < 8 ? 8
+                        : this.entries.length << 1;
+                Entry[] newEntries = new Entry[newCapacity];
                 for (int i = 0; i < newEntries.length; ++i) {
                     newEntries[i] = new Entry(null, null);
                 }
@@ -194,14 +196,24 @@ public class FileTreeWalker {
                     if (entry.getKey() == null)
                         continue;
 
-                    Entry destination = this.find(newEntries, entry.getKey());
-                    destination.setKey(entry.getKey());
-                    destination.setValue(entry.getValue());
+                    int index = (
+                            key.hashCode() >= 0 ? key.hashCode()
+                                    : -key.hashCode()
+                    ) % newEntries.length;
+                    for (;;) {
+                        Entry dest = newEntries[index];
+                        if (dest.getKey() == null && dest.getValue() == null) {
+                            dest.setKey(entry.getKey());
+                            dest.setValue(entry.getValue());
+                            break;
+                        }
+                        index = ++index % newEntries.length;
+                    }
                     this.count++;
                 }
                 this.entries = newEntries;
             }
-            Entry entry = this.find(this.entries, key);
+            Entry entry = this.find(key);
             if (entry.getKey() == null && entry.getValue() == null)
                 this.count++;
 
@@ -209,16 +221,18 @@ public class FileTreeWalker {
             entry.setValue(value);
         }
 
-        private Entry find(Entry[] entries, String key) {
-            int index = Math.abs(key.hashCode()) % entries.length;
+        private Entry find(String key) {
+            int index = (
+                    key.hashCode() >= 0 ? key.hashCode() : -key.hashCode()
+            ) % this.entries.length;
             for (;;) {
-                Entry entry = entries[index];
+                Entry entry = this.entries[index];
                 if (entry.getKey() == null && entry.getValue() == null) {
                     return entry;
                 } else if (Objects.equals(key, entry.getKey()))
                     return entry;
 
-                index = ++index % entries.length;
+                index = ++index % this.entries.length;
             }
         }
 
