@@ -12,6 +12,15 @@ class FileTreeWalkerTest {
         Path result = FileTreeWalker.find("cmake").orElse(null);
         assertNotNull(result);
         assertEquals("/usr/local/bin/cmake", result.toString());
+        result = FileTreeWalker.find("ninja").orElse(null);
+        assertNotNull(result);
+        assertEquals("/usr/bin/ninja", result.toString());
+        result = FileTreeWalker.find("clang").orElse(null);
+        assertNotNull(result);
+        assertEquals("/usr/bin/clang", result.toString());
+        result = FileTreeWalker.find("clang++").orElse(null);
+        assertNotNull(result);
+        assertEquals("/usr/bin/clang++", result.toString());
     }
 
     @Test

@@ -40,16 +40,20 @@ public class FileTreeWalker {
                                 .map(Paths::get)
                                 .toArray(Path[]::new)
         );
+        PathCache visited = new PathCache();
 
         while (!queue.isEmpty()) {
             Path current = queue.dequeue();
             if (current == null)
                 continue;
 
-            if (Files.isDirectory(current, LinkOption.NOFOLLOW_LINKS)) {
-                try (Stream<Path> stream = Files.list(current)) {
-                    stream.forEach(queue::enqueue);
-                } catch (IOException e) { /* skip */ }
+            if (Files.isDirectory(current)) {
+                if (visited.get(current.toString()).isEmpty()) {
+                    try (Stream<Path> stream = Files.list(current)) {
+                        stream.forEach(queue::enqueue);
+                        visited.set(current.toString(), current);
+                    } catch (IOException e) { /* skip */ }
+                }
             } else {
                 if (FileTreeWalker.ignore(current))
                     continue;
@@ -74,10 +78,8 @@ public class FileTreeWalker {
     }
 
     private static boolean ignore(Path path) {
-        return FileTreeWalker.CACHE
-                .get(FileTreeWalker.filename(path))
-                .isPresent()
-                || Files.isSymbolicLink(path);
+        return FileTreeWalker.CACHE.get(FileTreeWalker.filename(path))
+                .isPresent();
     }
 
     private static class PathQueue {
